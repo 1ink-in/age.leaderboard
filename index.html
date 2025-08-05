@@ -4,7 +4,133 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Age Leaderboard</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* CSS Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+            margin: 0;
+            text-align: center;
+        }
+
+        p {
+            text-align: center;
+            margin: 0;
+            color: #7f8c8d;
+        }
+
+        input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #leaderboard {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .leaderboard-item:nth-child(1) {
+            background-color: #ffd700;
+            font-weight: bold;
+        }
+
+        .leaderboard-item:nth-child(2) {
+            background-color: #c0c0c0;
+        }
+
+        .leaderboard-item:nth-child(3) {
+            background-color: #cd7f32;
+        }
+
+        .loading {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -43,6 +169,132 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // Configuration - CHANGE THESE VALUES
+        const SPREADSHEET_ID = '1Dm7njHFDpc5T3t-V_pVfT-IUDicfdyKS_9GvT2iXcIg';
+        const API_KEY = 'AIzaSyCVf1vh7VRDdB1asT52jgVJUlp4eMveKug';
+        const SHEET_NAME = 'Users';
+        const RANGE = 'A:B'; // Column A: Name, Column B: Age
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqoAWYxinPKV1K0OVkBGi1AyYNxnFWYy5EerynwgkOSHKTRRimUslKo1f2tplTjG9ANw/exec
+';
+
+        // DOM Elements
+        const screens = {
+            welcome: document.getElementById('welcome-screen'),
+            name: document.getElementById('name-screen'),
+            age: document.getElementById('age-screen'),
+            leaderboard: document.getElementById('leaderboard-screen')
+        };
+        const loading = document.getElementById('loading');
+
+        // Navigation functions
+        function showScreen(screenId) {
+            Object.values(screens).forEach(screen => screen.classList.remove('active'));
+            screens[screenId].classList.add('active');
+        }
+
+        // Event Listeners
+        document.getElementById('start-btn').addEventListener('click', () => {
+            showScreen('name');
+        });
+
+        document.getElementById('name-next').addEventListener('click', () => {
+            const userName = document.getElementById('user-name').value.trim();
+            if (userName) {
+                document.getElementById('display-name').textContent = userName;
+                showScreen('age');
+            } else {
+                alert('Please enter your name');
+            }
+        });
+
+        document.getElementById('submit-age').addEventListener('click', async () => {
+            const userName = document.getElementById('user-name').value.trim();
+            const userAge = parseInt(document.getElementById('user-age').value);
+            
+            if (userName && !isNaN(userAge)) {
+                loading.style.display = 'flex';
+                
+                try {
+                    // Save data
+                    await saveToGoogleSheets(userName, userAge);
+                    
+                    // Load leaderboard
+                    await loadLeaderboard();
+                    showScreen('leaderboard');
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Something went wrong. Please try again.');
+                } finally {
+                    loading.style.display = 'none';
+                }
+            } else {
+                alert('Please enter valid name and age');
+            }
+        });
+
+        document.getElementById('new-entry').addEventListener('click', () => {
+            document.getElementById('user-name').value = '';
+            document.getElementById('user-age').value = '';
+            showScreen('name');
+        });
+
+        // Google Sheets functions
+        async function saveToGoogleSheets(name, age) {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, age }),
+            });
+            
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to save data');
+            }
+        }
+
+        async function loadLeaderboard() {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!${RANGE}?key=${API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.values && data.values.length > 1) {
+                const entries = data.values.slice(1).map(row => ({
+                    name: row[0],
+                    age: parseInt(row[1])
+                }));
+                
+                const top10 = entries.sort((a, b) => b.age - a.age).slice(0, 10);
+                displayLeaderboard(top10);
+            } else {
+                displayLeaderboard([]);
+            }
+        }
+
+        function displayLeaderboard(entries) {
+            const leaderboard = document.getElementById('leaderboard');
+            leaderboard.innerHTML = '';
+            
+            if (entries.length === 0) {
+                leaderboard.innerHTML = '<p>No entries yet. Be the first!</p>';
+                return;
+            }
+            
+            entries.forEach((entry, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                item.innerHTML = `
+                    <span>${index + 1}. ${entry.name}</span>
+                    <span>${entry.age}</span>
+                `;
+                leaderboard.appendChild(item);
+            });
+        }
+
+        // Initialize
+        showScreen('welcome');
+    </script>
 </body>
 </html>
