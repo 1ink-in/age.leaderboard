@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Age Leaderboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="screen active">
+            <h1>Age Leaderboard</h1>
+            <p>Enter your details to see how you compare!</p>
+            <button id="start-btn">Get Started</button>
+        </div>
+
+        <!-- Name Input -->
+        <div id="name-screen" class="screen">
+            <h2>What's your name?</h2>
+            <input type="text" id="user-name" placeholder="Your name" required>
+            <button id="name-next">Next</button>
+        </div>
+
+        <!-- Age Input -->
+        <div id="age-screen" class="screen">
+            <h2>Hello, <span id="display-name"></span>!</h2>
+            <p>How old are you?</p>
+            <input type="number" id="user-age" min="1" max="120" placeholder="Your age" required>
+            <button id="submit-age">Submit</button>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard-screen" class="screen">
+            <h2>Top 10 Oldest</h2>
+            <div id="leaderboard"></div>
+            <button id="new-entry">Add New Entry</button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
